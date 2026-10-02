@@ -217,8 +217,8 @@
     align-items: center;
     gap: 8px;
     margin-right: 0.5rem;
-    padding: 3px 10px 3px 4px;
-    border: 1px solid transparent;
+    padding: 4px 11px 4px 5px;
+    border: 0;
     border-radius: 14px;
     background: transparent;
     color: inherit;
@@ -229,9 +229,8 @@
     cursor: pointer;
 }
 
-/* On: the same warm fill and border as the form version used */
+/* On: a warm fill behind the switch and its label */
 .elemental-draft-lock-header[aria-checked="true"] {
-    border-color: #7a5200;
     background-color: #fbecc6;
 }
 

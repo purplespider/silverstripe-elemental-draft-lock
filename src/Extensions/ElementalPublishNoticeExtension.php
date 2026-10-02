@@ -102,19 +102,19 @@ class ElementalPublishNoticeExtension extends Extension
         $strings = [
             'held-heading' => _t(
                 __CLASS__ . '.HELD_HEADING',
-                'Blocks not publishing automatically with this page:'
+                'Staying in draft when you publish:'
             ),
             'held-hint' => _t(
                 __CLASS__ . '.HELD_HINT',
-                'Publish a block on its own from its three dots menu, or all of them with "Publish page and locked blocks" in the page\'s more options menu.'
+                'Publish one from its three dots menu, or all of them from the page\'s three dots menu.'
             ),
             'pending-heading' => _t(
                 __CLASS__ . '.UNPUBLISHED_HEADING',
-                'Blocks going live with this page:'
+                'Going live when you publish:'
             ),
             'pending-hint' => _t(
                 __CLASS__ . '.UNPUBLISHED_HINT',
-                'Not ready? Turn on "Lock as Draft" for it.'
+                'Not ready? Switch on "Lock as Draft".'
             ),
             'untitled' => _t(__CLASS__ . '.UNTITLED', 'Untitled'),
         ];
