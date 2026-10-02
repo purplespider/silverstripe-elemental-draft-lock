@@ -2,7 +2,7 @@
 
 Stops a page publish from accidentally publishing blocks that were meant to stay in draft.
 
-<img width="1372" height="430" alt="Screenshot 2026-10-02 at 12 56 50@2x" src="https://github.com/user-attachments/assets/fe024b5c-ab53-4420-89da-6f26ecf902d0" />
+<img width="1536" height="280" alt="Screenshot 2026-10-02 at 16 45 34@2x" src="https://github.com/user-attachments/assets/c249d744-871e-4279-9f6a-44f6bed30a2a" />
 <img width="1124" height="266" alt="Screenshot 2026-10-02 at 12 57 47@2x" src="https://github.com/user-attachments/assets/056e4b0c-bd92-49b3-9328-d98190eb86ae" />
 
 
