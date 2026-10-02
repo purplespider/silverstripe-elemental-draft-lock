@@ -32,7 +32,8 @@ class ChangeSetItemDraftLockExtension extends Extension
 {
     public function updateChangeType(&$type, $draftVersion, $liveVersion)
     {
-        if (!DraftLock::isEnabled()) {
+        // Suspended by the "Publish page and locked blocks" action
+        if (!DraftLock::isEnabled() || DraftLock::isSuspended()) {
             return;
         }
 

@@ -1,5 +1,6 @@
 /**
- * Keeps the publish notices in step with the block list.
+ * Keeps the publish notices, and the "Publish page and locked blocks" action, in step with the
+ * block list, and puts a "Lock as Draft" switch in the header of each expanded draft block.
  *
  * Publishing or unpublishing a block from its own menu is a GraphQL mutation. Elemental refreshes
  * the block list from it, but the page edit form around it is never re-fetched, so the notices the
@@ -13,6 +14,8 @@
  *   .element-editor__element--draft                  ...and is not on the live site at all
  *   #element-icon-<id>                               the block's ID
  *   .element-editor-header__title                    the block's title
+ *   .element-editor-header__actions                  the header's ... menu and caret
+ *   .element-editor-editform--collapsed              a collapsed block's form, kept off screen
  */
 (function () {
     var BLOCK = '.element-editor__element';
@@ -134,11 +137,12 @@
         panel.appendChild(hintEl);
     }
 
+    /** Renders one notice and returns how many blocks it lists as held. */
     function render(notices) {
         var list = listFor(notices);
 
         if (!list) {
-            return;
+            return 0;
         }
 
         var heldIDs = (notices.getAttribute('data-held-ids') || '').split(',').filter(Boolean);
@@ -182,7 +186,7 @@
         var signature = JSON.stringify([held, pendingBlocks]);
 
         if (notices.draftLockSignature === signature) {
-            return;
+            return held.length;
         }
 
         notices.draftLockSignature = signature;
@@ -197,6 +201,135 @@
             data.pendingHint,
             data.untitled
         );
+
+        return held.length;
+    }
+
+    /* Hidden rather than removed, so the CMS's own handling of the actions menu is undisturbed.
+       Only touched when it would change, for the same reason as the padlock class above. */
+    function toggleAction(form, show) {
+        var action = form.querySelector('.elemental-draft-lock-publish-all');
+
+        if (action && action.hidden === show) {
+            action.hidden = !show;
+        }
+    }
+
+    var HEADER_TOGGLE = 'elemental-draft-lock-header';
+    var HAS_HEADER_TOGGLE = 'elemental-draft-lock-has-header-toggle';
+
+    /**
+     * The block's own Lock as Draft checkbox, if its form is loaded and the block is expanded.
+     * Elemental keeps a collapsed block's form rendered off screen, so being in the DOM is not
+     * enough.
+     */
+    function visibleCheckbox(block) {
+        var checkbox = block.querySelector('.elemental-draft-lock input[type="checkbox"]');
+
+        if (!checkbox || checkbox.closest('.element-editor-editform--collapsed')) {
+            return null;
+        }
+
+        return checkbox;
+    }
+
+    function setChecked(toggle, checked) {
+        var value = checked ? 'true' : 'false';
+
+        if (toggle.getAttribute('aria-checked') !== value) {
+            toggle.setAttribute('aria-checked', value);
+        }
+    }
+
+    /**
+     * Builds the header switch for a block.
+     *
+     * The header is drawn by Elemental's React code, which has no slot for it, so this is added
+     * beside its own nodes rather than through it. It is only a stand-in: clicking it clicks the
+     * real checkbox in the block's form, so React, the form's dirty state and saving all behave
+     * exactly as if the editor had used the checkbox, and the checkbox remains what is submitted.
+     */
+    function buildHeaderToggle(field) {
+        var label = field.querySelector('.form-check-label');
+        var description = field.querySelector('.form__field-description');
+        var toggle = document.createElement('button');
+        var track = document.createElement('span');
+        var text = document.createElement('span');
+
+        toggle.type = 'button';
+        toggle.className = HEADER_TOGGLE;
+        toggle.setAttribute('role', 'switch');
+        toggle.setAttribute('aria-checked', 'false');
+
+        if (description) {
+            toggle.title = description.textContent.trim();
+        }
+
+        track.className = HEADER_TOGGLE + '__track';
+        track.setAttribute('aria-hidden', 'true');
+
+        text.className = HEADER_TOGGLE + '__label';
+        text.textContent = label ? label.textContent.trim() : 'Lock as Draft';
+
+        toggle.appendChild(track);
+        toggle.appendChild(text);
+
+        /* The whole block is Elemental's click and key target for expanding and collapsing it, so
+           neither may reach it from here. Stopping the native event also keeps it from React,
+           which listens further up the document. */
+        toggle.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            var block = toggle.closest(BLOCK);
+            var checkbox = block && visibleCheckbox(block);
+
+            if (checkbox) {
+                checkbox.click();
+                setChecked(toggle, checkbox.checked);
+                schedule();
+            }
+        });
+
+        toggle.addEventListener('keyup', function (event) {
+            event.stopPropagation();
+        });
+
+        return toggle;
+    }
+
+    /** Adds, updates or removes the header switch on every block, only where it would change. */
+    function syncHeaderToggles() {
+        Array.prototype.forEach.call(document.querySelectorAll(BLOCK), function (block) {
+            var actions = block.querySelector('.element-editor-header__actions');
+            var toggle = actions && actions.querySelector('.' + HEADER_TOGGLE);
+            var checkbox = blockIsDraftOnly(block) ? visibleCheckbox(block) : null;
+            var wanted = Boolean(actions && checkbox);
+
+            if (!wanted) {
+                if (toggle) {
+                    toggle.parentNode.removeChild(toggle);
+                }
+
+                if (block.classList.contains(HAS_HEADER_TOGGLE)) {
+                    block.classList.remove(HAS_HEADER_TOGGLE);
+                }
+
+                return;
+            }
+
+            if (!toggle) {
+                toggle = buildHeaderToggle(checkbox.closest('.elemental-draft-lock'));
+                actions.insertBefore(toggle, actions.firstChild);
+            }
+
+            /* Hides the switch in the form, which stays in place as the value that is saved */
+            if (!block.classList.contains(HAS_HEADER_TOGGLE)) {
+                block.classList.add(HAS_HEADER_TOGGLE);
+            }
+
+            setChecked(toggle, checkbox.checked);
+        });
     }
 
     var queued = false;
@@ -204,13 +337,36 @@
     function renderAll() {
         queued = false;
 
-        var all = document.querySelectorAll('.elemental-draft-lock-notices');
+        syncHeaderToggles();
 
-        Array.prototype.forEach.call(all, render);
+        var all = document.querySelectorAll('.elemental-draft-lock-notices');
+        var forms = [];
+        var heldByForm = [];
+
+        /* A page can have more than one block list, each with its own notice, but only one
+           actions menu, so the action is shown if any of them has a held block */
+        Array.prototype.forEach.call(all, function (notices) {
+            var form = notices.closest('form');
+            var held = render(notices);
+            var index = forms.indexOf(form);
+
+            if (index === -1) {
+                forms.push(form);
+                heldByForm.push(held);
+            } else {
+                heldByForm[index] += held;
+            }
+        });
+
+        forms.forEach(function (form, index) {
+            if (form) {
+                toggleAction(form, heldByForm[index] > 0);
+            }
+        });
     }
 
     function schedule() {
-        if (queued || !document.querySelector('.elemental-draft-lock-notices')) {
+        if (queued || !document.querySelector('.element-editor')) {
             return;
         }
 
@@ -218,13 +374,13 @@
         window.requestAnimationFrame(renderAll);
     }
 
-    /** Ignore the notices' own markup, so rendering them can never trigger another render. */
+    /** Ignore this script's own markup, so rendering it can never trigger another render. */
     function worthChecking(records) {
         for (var i = 0; i < records.length; i += 1) {
             var target = records[i].target;
             var element = target.nodeType === 1 ? target : target.parentElement;
 
-            if (element && !element.closest('.elemental-draft-lock-notices')) {
+            if (element && !element.closest('.elemental-draft-lock-notices, .' + HEADER_TOGGLE)) {
                 return true;
             }
         }

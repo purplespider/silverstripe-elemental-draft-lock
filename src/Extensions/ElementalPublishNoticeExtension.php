@@ -91,9 +91,8 @@ class ElementalPublishNoticeExtension extends Extension
                 continue;
             }
 
-            // The flag only holds a block that is not live yet, the same rule the publish itself
-            // follows. A published block with edits goes live with the page whatever its flag says.
-            if ($element->DraftLocked && !$published) {
+            // The same rule the publish itself follows
+            if (DraftLock::isHeld($element)) {
                 $held[] = $element;
             } else {
                 $unpublished[] = $element;
@@ -107,7 +106,7 @@ class ElementalPublishNoticeExtension extends Extension
             ),
             'held-hint' => _t(
                 __CLASS__ . '.HELD_HINT',
-                'Publish a block on its own from its three dots menu.'
+                'Publish a block on its own from its three dots menu, or all of them with "Publish page and locked blocks" in the page\'s more options menu.'
             ),
             'pending-heading' => _t(
                 __CLASS__ . '.UNPUBLISHED_HEADING',

@@ -4,7 +4,11 @@ en:
     LOCK_AS_DRAFT_DESCRIPTION: 'Publishing the page will skip this block and leave it in draft.'
   PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension:
     HELD_HEADING: 'Blocks not publishing automatically with this page:'
-    HELD_HINT: 'Publish a block on its own from its <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu.'
+    HELD_HINT: 'Publish a block on its own from its <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu, or all of them with "Publish page and locked blocks" in the page''s more options menu.'
     UNPUBLISHED_HEADING: 'Blocks going live with this page:'
     UNPUBLISHED_HINT: 'Not ready? Turn on "Lock as Draft" for it.'
     UNTITLED: 'Untitled'
+  PurpleSpider\ElementalDraftLock\Extensions\SiteTreeDraftLockExtension:
+    PUBLISH_WITH_LOCKED: 'Publish page and locked blocks'
+  PurpleSpider\ElementalDraftLock\Extensions\CMSMainDraftLockExtension:
+    PUBLISHED_WITH_LOCKED: 'Published ''{title}'' and its locked blocks'

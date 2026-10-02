@@ -18,3 +18,8 @@ SilverStripe\Versioned\ChangeSetItem:
 SilverStripe\CMS\Model\SiteTree:
   extensions:
     - PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension
+    - PurpleSpider\ElementalDraftLock\Extensions\SiteTreeDraftLockExtension
+
+SilverStripe\CMS\Controllers\CMSMain:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\CMSMainDraftLockExtension

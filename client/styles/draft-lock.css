@@ -36,6 +36,12 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* The admin styles its action buttons with a display value, which would otherwise beat the
+   hidden attribute the script uses to show this one only when there is something to publish */
+.elemental-draft-lock-publish-all[hidden] {
+    display: none !important;
+}
+
 /* The notices below the block list: one line naming the blocks, one line saying what to do */
 .elemental-draft-lock-notice[hidden] {
     display: none;
@@ -190,4 +196,91 @@
     outline: 3px solid #123a7a;
     outline-offset: 2px;
     box-shadow: none;
+}
+
+/* The header switch, beside the block's ... menu while it is expanded and still in draft. It
+   stands in for the switch in the form, which is hidden while it is there but stays in place as
+   the value that is saved. */
+.elemental-draft-lock-has-header-toggle .field.elemental-draft-lock {
+    display: none;
+}
+
+/* Elemental leaves the header's actions only 60px beside the title, enough for the menu and the
+   caret. The title gives up room for the switch instead, and truncates if it has to. */
+.elemental-draft-lock-has-header-toggle .element-editor-header__info {
+    max-width: calc(100% - 210px);
+}
+
+.elemental-draft-lock-header {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    margin-right: 0.5rem;
+    padding: 3px 10px 3px 4px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* On: the same warm fill and border as the form version used */
+.elemental-draft-lock-header[aria-checked="true"] {
+    border-color: #7a5200;
+    background-color: #fbecc6;
+}
+
+.elemental-draft-lock-header__track {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: #767b80;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.elemental-draft-lock-header__track::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #fff;
+    transition: transform 0.15s ease-in-out;
+}
+
+.elemental-draft-lock-header[aria-checked="true"] .elemental-draft-lock-header__track {
+    background-color: #7a5200;
+}
+
+.elemental-draft-lock-header[aria-checked="true"] .elemental-draft-lock-header__track::before {
+    transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .elemental-draft-lock-header__track,
+    .elemental-draft-lock-header__track::before {
+        transition: none;
+    }
+}
+
+/* A solid ring, as on the form version. Handled on :focus too, since Bootstrap's button:focus
+   rule would otherwise draw its own ring on mouse click, where :focus-visible does not apply. */
+.elemental-draft-lock-header:focus,
+.elemental-draft-lock-header:focus-visible {
+    outline: 3px solid #123a7a;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.elemental-draft-lock-header:focus:not(:focus-visible) {
+    outline: none;
 }

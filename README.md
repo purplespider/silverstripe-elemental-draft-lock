@@ -17,10 +17,14 @@ block back either.
 
 ## What this module does
 
-- Adds a **Lock as Draft** switch at the bottom of a block's Content tab, while the block is still
-  in draft. Off, it is an unadorned row in the form; on, the row fills amber and the help text
-  unfolds beneath it. Once the block is live the field disappears, since there is nothing left to
-  hold.
+- Adds a **Lock as Draft** switch to a block's header, beside its three dots menu, while the block
+  is expanded and still in draft. On, it fills amber. Once the block is live the switch
+  disappears, since there is nothing left to hold.
+
+  Elemental draws the header with React and has no slot for it, so the header switch is a stand-in
+  added by script: clicking it clicks a real checkbox at the bottom of the block's Content tab,
+  which is hidden while the header switch is there and remains the value that is saved. If the
+  script cannot place it, that checkbox is shown in the form instead, with its help text.
 - Blocks with the switch on are skipped when the page is published.
 - The block's own three dots menu → **Publish** still publishes it. From then on the block is
   live, so it is no longer held and later edits go live with the page. The switch is left exactly
@@ -30,8 +34,12 @@ block back either.
 - A notice below the block list on the page tells the editor which blocks will be held back and
   which draft blocks are about to go live. Blocks that are live with nothing pending appear in
   neither list, since nothing is being held back.
+- **Publish page and locked blocks**, in the page's more options menu, publishes the page with
+  every locked block included. It only appears while the page has a locked block waiting. Like
+  publishing a block from its own menu, it leaves the switches as they are.
 
-Nothing is held back automatically: the editor has to turn the switch on.
+By default nothing is held back automatically: the editor has to turn the switch on. Set
+`lock_new_blocks` (below) to have new blocks start locked instead.
 
 ## How the hold works
 
@@ -83,6 +91,18 @@ and the flag is ignored when publishing:
 PurpleSpider\ElementalDraftLock\DraftLock:
   enabled: false
 ```
+
+To have every new block start with **Lock as Draft** switched on, so nothing new goes live with the
+page until the editor says it is ready:
+
+```yaml
+PurpleSpider\ElementalDraftLock\DraftLock:
+  lock_new_blocks: true
+```
+
+Only blocks created after it is turned on are affected; existing blocks keep whatever they had.
+Editors then publish blocks one at a time from their own menus, or all at once with **Publish page
+and locked blocks**.
 
 ## Known limitation
 

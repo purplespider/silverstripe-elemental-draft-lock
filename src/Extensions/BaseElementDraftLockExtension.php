@@ -23,6 +23,16 @@ class BaseElementDraftLockExtension extends Extension
         'DraftLocked' => 'Boolean',
     ];
 
+    /**
+     * Runs only when a block is first created, so `lock_new_blocks` never touches existing blocks
+     */
+    public function populateDefaults()
+    {
+        if (DraftLock::locksNewBlocks()) {
+            $this->owner->DraftLocked = true;
+        }
+    }
+
     public function updateCMSFields(FieldList $fields)
     {
         // Drop the scaffolded checkbox, we place our own version below

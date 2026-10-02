@@ -25,6 +25,10 @@ class DraftLockTest extends SapphireTest
         parent::setUp();
 
         Versioned::set_stage(Versioned::DRAFT);
+
+        // Whatever the site running the tests has configured
+        DraftLock::config()->set('enabled', true);
+        DraftLock::config()->set('lock_new_blocks', false);
     }
 
     private function makePage(): DraftLockTestPage
@@ -217,5 +221,57 @@ class DraftLockTest extends SapphireTest
         $page->publishRecursive();
 
         $this->assertTrue($this->isLive($held), 'With the module disabled the flag should be ignored');
+    }
+
+    public function testNewBlocksAreUnlockedByDefault()
+    {
+        $page = $this->makePage();
+        $block = ElementContent::create();
+        $block->ParentID = $page->ElementalAreaID;
+        $block->write();
+
+        $this->assertFalse((bool) $block->DraftLocked);
+    }
+
+    public function testLockNewBlocksLocksOnlyNewBlocks()
+    {
+        $page = $this->makePage();
+        $existing = $this->makeBlock($page, 'Existing');
+
+        DraftLock::config()->set('lock_new_blocks', true);
+
+        $new = ElementContent::create();
+        $this->assertTrue((bool) $new->DraftLocked, 'A new block starts locked');
+
+        $this->assertFalse((bool) $this->reload($existing)->DraftLocked, 'Existing blocks are left alone');
+    }
+
+    public function testLockNewBlocksDoesNothingWhenTheModuleIsDisabled()
+    {
+        DraftLock::config()->set('lock_new_blocks', true);
+        DraftLock::config()->set('enabled', false);
+
+        $this->assertFalse((bool) ElementContent::create()->DraftLocked);
+    }
+
+    public function testSuspendingLocksPublishesLockedBlocksAndThenRestoresThem()
+    {
+        $page = $this->makePage();
+        $locked = $this->makeBlock($page, 'Locked', true);
+
+        DraftLock::withLocksSuspended(fn () => $page->publishRecursive());
+
+        $this->assertTrue($this->isLive($locked), 'Locks are ignored inside the callback');
+        $this->assertFalse(DraftLock::isSuspended(), 'And back in force afterwards');
+
+        try {
+            DraftLock::withLocksSuspended(function () {
+                throw new \RuntimeException('publish failed');
+            });
+        } catch (\RuntimeException $e) {
+            // Expected
+        }
+
+        $this->assertFalse(DraftLock::isSuspended(), 'Even if the publish throws');
     }
 }
