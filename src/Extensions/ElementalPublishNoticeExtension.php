@@ -114,13 +114,22 @@ class ElementalPublishNoticeExtension extends Extension
             ),
             'pending-heading' => _t(
                 __CLASS__ . '.UNPUBLISHED_HEADING',
-                'Going live when you publish:'
+                'Unlocked Blocks'
+            ),
+            'pending-intro' => _t(
+                __CLASS__ . '.UNPUBLISHED_INTRO',
+                'These draft blocks will be published with the page:'
             ),
             'pending-hint' => _t(
                 __CLASS__ . '.UNPUBLISHED_HINT',
                 'Not ready? Switch on "Lock as Draft".'
             ),
             'untitled' => _t(__CLASS__ . '.UNTITLED', 'Untitled'),
+            // For the header switch, which the script builds
+            'toggle-title' => _t(
+                __CLASS__ . '.TOGGLE_TITLE',
+                'When on, publishing the page will not publish this block'
+            ),
         ];
 
         $attributes = ' data-held-ids="' . Convert::raw2att(implode(',', $heldIDs)) . '"'
@@ -135,7 +144,14 @@ class ElementalPublishNoticeExtension extends Extension
         // somewhere to put a notice when a block is unpublished from its own menu
         $html = '<div class="elemental-draft-lock-notices"' . $attributes . '>'
             . $this->panel('warning', 'held', $strings['held-heading'], $strings['held-intro'], $held, $strings['held-hint'])
-            . $this->panel('info', 'pending', $strings['pending-heading'], '', $unpublished, $strings['pending-hint'])
+            . $this->panel(
+                'info',
+                'pending',
+                $strings['pending-heading'],
+                $strings['pending-intro'],
+                $unpublished,
+                $strings['pending-hint']
+            )
             . '</div>';
 
         return LiteralField::create('ElementalDraftLockNotice' . $relationName, $html);

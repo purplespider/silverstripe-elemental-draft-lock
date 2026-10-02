@@ -216,7 +216,7 @@
         fill(
             notices.querySelector('[data-role="pending"]'),
             data.pendingHeading,
-            '',
+            data.pendingIntro,
             pendingBlocks,
             data.pendingHint,
             data.untitled
@@ -281,8 +281,11 @@
         toggle.setAttribute('role', 'switch');
         toggle.setAttribute('aria-checked', 'false');
 
-        if (description) {
-            toggle.title = description.textContent.trim();
+        var notices = document.querySelector('.elemental-draft-lock-notices');
+        var title = notices && notices.getAttribute('data-toggle-title');
+
+        if (title || description) {
+            toggle.title = title || description.textContent.trim();
         }
 
         track.className = HEADER_TOGGLE + '__track';
