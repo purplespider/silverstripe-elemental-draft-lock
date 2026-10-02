@@ -110,7 +110,7 @@ class ElementalPublishNoticeExtension extends Extension
             ),
             'held-hint' => _t(
                 __CLASS__ . '.HELD_HINT',
-                'Publish one from its three dots menu, or all of them from the page\'s three dots menu.'
+                'Publish one from its three dots menu, or all of them from the page\'s three dots menu below.'
             ),
             'pending-heading' => _t(
                 __CLASS__ . '.UNPUBLISHED_HEADING',

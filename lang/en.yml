@@ -5,7 +5,7 @@ en:
   PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension:
     HELD_HEADING: 'Locked Blocks'
     HELD_INTRO: 'These blocks are locked as draft and won''t be published automatically with the page:'
-    HELD_HINT: 'Publish one from its <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu, or all of them from the page''s <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu.'
+    HELD_HINT: 'Publish one from its <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu, or all of them from the page''s <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu below.'
     UNPUBLISHED_HEADING: 'Unlocked Blocks'
     UNPUBLISHED_INTRO: 'These draft blocks will be published with the page:'
     UNPUBLISHED_HINT: 'Not ready? Switch on "Lock as Draft".'
