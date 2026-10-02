@@ -88,7 +88,7 @@
     }
 
     /** Builds the same markup as ElementalPublishNoticeExtension::panel() on the server. */
-    function fill(panel, heading, blocks, hint, untitled) {
+    function fill(panel, heading, intro, blocks, hint, untitled) {
         if (!panel) {
             return;
         }
@@ -104,6 +104,13 @@
         var strong = document.createElement('strong');
         strong.textContent = heading;
         panel.appendChild(strong);
+
+        if (intro) {
+            var introEl = document.createElement('span');
+            introEl.className = 'elemental-draft-lock-notice__intro';
+            introEl.textContent = intro;
+            panel.appendChild(introEl);
+        }
 
         var list = document.createElement('ul');
         list.className = 'elemental-draft-lock-notice__list';
@@ -193,10 +200,18 @@
 
         var data = notices.dataset;
 
-        fill(notices.querySelector('[data-role="held"]'), data.heldHeading, held, data.heldHint, data.untitled);
+        fill(
+            notices.querySelector('[data-role="held"]'),
+            data.heldHeading,
+            data.heldIntro,
+            held,
+            data.heldHint,
+            data.untitled
+        );
         fill(
             notices.querySelector('[data-role="pending"]'),
             data.pendingHeading,
+            '',
             pendingBlocks,
             data.pendingHint,
             data.untitled

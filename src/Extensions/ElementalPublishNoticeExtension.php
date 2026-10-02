@@ -102,7 +102,11 @@ class ElementalPublishNoticeExtension extends Extension
         $strings = [
             'held-heading' => _t(
                 __CLASS__ . '.HELD_HEADING',
-                'Staying in draft when you publish:'
+                'Locked Blocks'
+            ),
+            'held-intro' => _t(
+                __CLASS__ . '.HELD_INTRO',
+                'These blocks are locked as draft and won\'t be published automatically with the page:'
             ),
             'held-hint' => _t(
                 __CLASS__ . '.HELD_HINT',
@@ -129,17 +133,25 @@ class ElementalPublishNoticeExtension extends Extension
         // The container is rendered even when there is nothing to say, so that the script has
         // somewhere to put a notice when a block is unpublished from its own menu
         $html = '<div class="elemental-draft-lock-notices"' . $attributes . '>'
-            . $this->panel('warning', 'held', $strings['held-heading'], $held, $strings['held-hint'])
-            . $this->panel('info', 'pending', $strings['pending-heading'], $unpublished, $strings['pending-hint'])
+            . $this->panel('warning', 'held', $strings['held-heading'], $strings['held-intro'], $held, $strings['held-hint'])
+            . $this->panel('info', 'pending', $strings['pending-heading'], '', $unpublished, $strings['pending-hint'])
             . '</div>';
 
         return LiteralField::create('ElementalDraftLockNotice' . $relationName, $html);
     }
 
     /**
-     * A heading, the blocks listed one per line, then what to do about them.
+     * A heading, an optional line saying why, the blocks listed one per line, then what to do
+     * about them.
      */
-    private function panel(string $type, string $role, string $heading, array $elements, string $hint): string
+    private function panel(
+        string $type,
+        string $role,
+        string $heading,
+        string $intro,
+        array $elements,
+        string $hint
+    ): string
     {
         $items = '';
 
@@ -150,6 +162,7 @@ class ElementalPublishNoticeExtension extends Extension
         return '<div class="alert alert-' . $type . ' elemental-draft-lock-notice"'
             . ' role="alert" data-role="' . $role . '"' . ($elements ? '' : ' hidden') . '>'
             . '<strong>' . $heading . '</strong>'
+            . ($intro === '' ? '' : '<span class="elemental-draft-lock-notice__intro">' . $intro . '</span>')
             . '<ul class="elemental-draft-lock-notice__list">' . $items . '</ul>'
             . '<span class="elemental-draft-lock-notice__hint">' . $hint . '</span>'
             . '</div>';

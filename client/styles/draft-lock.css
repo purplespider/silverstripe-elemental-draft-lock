@@ -52,6 +52,11 @@
     margin-bottom: 1rem;
 }
 
+.elemental-draft-lock-notice__intro {
+    display: block;
+    margin-top: 0.2rem;
+}
+
 .elemental-draft-lock-notice__list {
     margin: 0.2rem 0 0;
     padding-left: 1.25rem;
