@@ -1,6 +1,7 @@
 /**
- * Keeps the publish notices, and the "Publish page and locked blocks" action, in step with the
- * block list, and puts a "Lock as Draft" switch in the header of each expanded draft block.
+ * Puts a "Lock as Draft" switch in the header of each expanded draft block, which saves the moment
+ * it is thrown, and keeps the publish notices and the "Publish page and locked blocks" action in
+ * step with the block list.
  *
  * Publishing or unpublishing a block from its own menu is a GraphQL mutation. Elemental refreshes
  * the block list from it, but the page edit form around it is never re-fetched, so the notices the
@@ -15,7 +16,10 @@
  *   #element-icon-<id>                               the block's ID
  *   .element-editor-header__title                    the block's title
  *   .element-editor-header__actions                  the header's ... menu and caret
- *   .element-editor-editform--collapsed              a collapsed block's form, kept off screen
+ *   .element-editor__element--expandable             the block opens inline, rather than in its
+ *                                                    own edit form
+ *   .element-editor-editform(--collapsed)            an expanded block's form, and a collapsed
+ *                                                    one kept off screen
  */
 (function () {
     var BLOCK = '.element-editor__element';
@@ -56,24 +60,87 @@
     }
 
     /**
-     * The hold flag only ever changes when the editor saves it; nothing on the server touches it
-     * behind the form's back. So the IDs the server sent stay accurate for a collapsed block, and
-     * an expanded block is read from its switch instead, so throwing it updates the notices
-     * straight away.
+     * Every block's lock as the server holds it, by block ID. Seeded from each notices container
+     * the server renders, which happens again whenever the CMS reloads the page form, and kept
+     * current by the switch's own saves and by re-reading a block when something else may have
+     * changed it.
      */
-    function blockIsHeld(block, heldIDs) {
-        var checkbox = block.querySelector('.elemental-draft-lock input[type="checkbox"]');
+    var locks = {};
+    var requested = {};
 
-        if (checkbox) {
-            return checkbox.checked;
+    function settings() {
+        var notices = document.querySelector('.elemental-draft-lock-notices');
+
+        return notices ? notices.dataset : null;
+    }
+
+    function seed(notices) {
+        if (notices.draftLockSeeded) {
+            return;
         }
 
-        /* Locked by the server since this page was loaded, see matchLockOnUnpublish() */
-        if (block.draftLockLockedOnUnpublish) {
-            return true;
+        notices.draftLockSeeded = true;
+
+        var locked = (notices.getAttribute('data-locked-ids') || '').split(',');
+        var types = {};
+
+        try {
+            types = JSON.parse(notices.getAttribute('data-block-types') || '{}');
+        } catch (e) {
+            types = {};
         }
 
-        return heldIDs.indexOf(blockID(block)) !== -1;
+        Object.keys(types).forEach(function (id) {
+            locks[id] = locked.indexOf(id) !== -1;
+            delete requested[id];
+        });
+    }
+
+    /** Asks the server for a block's lock, at most once until something says to ask again. */
+    function fetchLock(id) {
+        var data = settings();
+
+        if (requested[id] || !data || !data.stateUrl || !window.fetch) {
+            return;
+        }
+
+        requested[id] = true;
+
+        window.fetch(data.stateUrl + '?ID=' + encodeURIComponent(id), {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (response) {
+                return response.ok ? response.json() : null;
+            })
+            .then(function (result) {
+                if (result) {
+                    locks[id] = Boolean(result.Locked);
+                    schedule();
+                }
+            })
+            .catch(function () {});
+    }
+
+    /**
+     * A block added since the page was loaded is not in the seed. Until the server answers, it is
+     * assumed to start the way new blocks do on this site.
+     */
+    function isLocked(block) {
+        var id = blockID(block);
+
+        if (!id) {
+            return false;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(locks, id)) {
+            fetchLock(id);
+            var data = settings();
+
+            return Boolean(data && data.lockNewBlocks === '1');
+        }
+
+        return locks[id];
     }
 
     /** The block list this notice belongs to: the last one that starts before it. */
@@ -157,7 +224,6 @@
             return 0;
         }
 
-        var heldIDs = (notices.getAttribute('data-held-ids') || '').split(',').filter(Boolean);
         var types = {};
 
         try {
@@ -171,7 +237,7 @@
 
         Array.prototype.forEach.call(list.querySelectorAll(BLOCK), function (block) {
             var pending = blockIsPending(block);
-            var isHeld = blockIsDraftOnly(block) && blockIsHeld(block, heldIDs);
+            var isHeld = blockIsDraftOnly(block) && isLocked(block);
 
             /* Marks the block so the stylesheet can put a padlock on its status badge. Only
                toggled when it would actually change, so this never mutates the DOM for nothing
@@ -237,20 +303,20 @@
 
     var HEADER_TOGGLE = 'elemental-draft-lock-header';
     var HAS_HEADER_TOGGLE = 'elemental-draft-lock-has-header-toggle';
+    var saving = {};
 
     /**
-     * The block's own Lock as Draft checkbox, if its form is loaded and the block is expanded.
-     * Elemental keeps a collapsed block's form rendered off screen, so being in the DOM is not
-     * enough.
+     * Whether the block is open. A block that cannot be edited inline never opens, so it counts as
+     * open, or it would never get a switch at all.
      */
-    function visibleCheckbox(block) {
-        var checkbox = block.querySelector('.elemental-draft-lock input[type="checkbox"]');
-
-        if (!checkbox || checkbox.closest('.element-editor-editform--collapsed')) {
-            return null;
+    function isOpen(block) {
+        if (!block.classList.contains('element-editor__element--expandable')) {
+            return !block.classList.contains('element-editor__element--broken');
         }
 
-        return checkbox;
+        var form = block.querySelector('.element-editor-editform');
+
+        return Boolean(form && !form.classList.contains('element-editor-editform--collapsed'));
     }
 
     function setChecked(toggle, checked) {
@@ -261,17 +327,81 @@
         }
     }
 
+    function showError(message) {
+        if (window.jQuery && window.jQuery.noticeAdd) {
+            window.jQuery.noticeAdd({ text: message, type: 'error', stayTime: 5000 });
+        } else {
+            window.alert(message);
+        }
+    }
+
+    /** The CMS form's security token, which the save needs to be accepted */
+    function securityToken() {
+        var input = document.querySelector('form.cms-edit-form input[name="SecurityID"]')
+            || document.querySelector('input[name="SecurityID"]');
+
+        return input ? input.value : '';
+    }
+
     /**
-     * Builds the header switch for a block.
-     *
-     * The header is drawn by Elemental's React code, which has no slot for it, so this is added
-     * beside its own nodes rather than through it. It is only a stand-in: clicking it clicks the
-     * real checkbox in the block's form, so React, the form's dirty state and saving all behave
-     * exactly as if the editor had used the checkbox, and the checkbox remains what is submitted.
+     * Saves the block's lock straight away. The switch moves first, and moves back if the save
+     * fails, so it never sits saying something the server does not.
      */
-    function buildHeaderToggle(field) {
-        var label = field.querySelector('.form-check-label');
-        var description = field.querySelector('.form__field-description');
+    function save(block, toggle) {
+        var data = settings();
+        var id = blockID(block);
+
+        if (!data || !id || saving[id]) {
+            return;
+        }
+
+        var previous = isLocked(block);
+        var locked = !previous;
+        var body = new window.URLSearchParams();
+
+        body.append('ID', id);
+        body.append('Locked', locked ? '1' : '0');
+        body.append('SecurityID', securityToken());
+
+        saving[id] = true;
+        locks[id] = locked;
+        setChecked(toggle, locked);
+        toggle.setAttribute('aria-busy', 'true');
+        schedule();
+
+        window.fetch(data.toggleUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error(String(response.status));
+                }
+
+                return response.json();
+            })
+            .then(function (result) {
+                locks[id] = Boolean(result.Locked);
+            })
+            .catch(function () {
+                locks[id] = previous;
+                showError(data.toggleFailed);
+            })
+            .then(function () {
+                delete saving[id];
+                toggle.removeAttribute('aria-busy');
+                schedule();
+            });
+    }
+
+    /**
+     * Builds the header switch for a block. The header is drawn by Elemental's React code, which
+     * has no slot for it, so this is added beside its own nodes rather than through it.
+     */
+    function buildHeaderToggle() {
+        var data = settings() || {};
         var toggle = document.createElement('button');
         var track = document.createElement('span');
         var text = document.createElement('span');
@@ -281,18 +411,15 @@
         toggle.setAttribute('role', 'switch');
         toggle.setAttribute('aria-checked', 'false');
 
-        var notices = document.querySelector('.elemental-draft-lock-notices');
-        var title = notices && notices.getAttribute('data-toggle-title');
-
-        if (title || description) {
-            toggle.title = title || description.textContent.trim();
+        if (data.toggleTitle) {
+            toggle.title = data.toggleTitle;
         }
 
         track.className = HEADER_TOGGLE + '__track';
         track.setAttribute('aria-hidden', 'true');
 
         text.className = HEADER_TOGGLE + '__label';
-        text.textContent = label ? label.textContent.trim() : 'Lock as Draft';
+        text.textContent = data.toggleLabel || 'Lock as Draft';
 
         toggle.appendChild(track);
         toggle.appendChild(text);
@@ -305,12 +432,9 @@
             event.stopPropagation();
 
             var block = toggle.closest(BLOCK);
-            var checkbox = block && visibleCheckbox(block);
 
-            if (checkbox) {
-                checkbox.click();
-                setChecked(toggle, checkbox.checked);
-                schedule();
+            if (block) {
+                save(block, toggle);
             }
         });
 
@@ -321,48 +445,29 @@
         return toggle;
     }
 
-    function locksOnUnpublish() {
-        var notices = document.querySelector('.elemental-draft-lock-notices');
-
-        return Boolean(notices && notices.getAttribute('data-lock-on-unpublish') === '1');
-    }
-
-    /**
-     * With `lock_on_unpublish` the server locks a block when it is unpublished from its own menu.
-     * That is a GraphQL call after which Elemental does not re-fetch the block's form, so a form
-     * already loaded would go on showing the switch off, and saving it would unlock the block
-     * again. This switches it on to match, through the checkbox, so the form knows it changed.
-     * A block whose form is not loaded yet will fetch the locked value when it is opened.
-     */
-    function matchLockOnUnpublish(block) {
-        var checkbox = block.querySelector('.elemental-draft-lock input[type="checkbox"]');
-
-        block.draftLockLockedOnUnpublish = true;
-
-        if (checkbox && !checkbox.checked) {
-            checkbox.click();
-        }
-    }
-
     /** Adds, updates or removes the header switch on every block, only where it would change. */
     function syncHeaderToggles() {
-        var lockOnUnpublish = locksOnUnpublish();
+        var data = settings();
+        var lockOnUnpublish = Boolean(data && data.lockOnUnpublish === '1');
 
         Array.prototype.forEach.call(document.querySelectorAll(BLOCK), function (block) {
             var draftOnly = blockIsDraftOnly(block);
+            var id = blockID(block);
 
-            /* Only a block seen on the live site and now off it has just been unpublished. One that
-               has been draft only since the page loaded has not. */
-            if (lockOnUnpublish && block.draftLockWasDraftOnly === false && draftOnly) {
-                matchLockOnUnpublish(block);
+            /* With lock_on_unpublish the server locks a block unpublished from its own menu, which
+               Elemental does through GraphQL without telling the page. A block seen live and now
+               draft only has just been unpublished, so its lock is read again. */
+            if (lockOnUnpublish && id && block.draftLockWasDraftOnly === false && draftOnly) {
+                locks[id] = true;
+                delete requested[id];
+                fetchLock(id);
             }
 
             block.draftLockWasDraftOnly = draftOnly;
 
             var actions = block.querySelector('.element-editor-header__actions');
             var toggle = actions && actions.querySelector('.' + HEADER_TOGGLE);
-            var checkbox = draftOnly ? visibleCheckbox(block) : null;
-            var wanted = Boolean(actions && checkbox);
+            var wanted = Boolean(data && actions && id && draftOnly && isOpen(block));
 
             if (!wanted) {
                 if (toggle) {
@@ -377,16 +482,15 @@
             }
 
             if (!toggle) {
-                toggle = buildHeaderToggle(checkbox.closest('.elemental-draft-lock'));
+                toggle = buildHeaderToggle();
                 actions.insertBefore(toggle, actions.firstChild);
             }
 
-            /* Hides the switch in the form, which stays in place as the value that is saved */
             if (!block.classList.contains(HAS_HEADER_TOGGLE)) {
                 block.classList.add(HAS_HEADER_TOGGLE);
             }
 
-            setChecked(toggle, checkbox.checked);
+            setChecked(toggle, isLocked(block));
         });
     }
 
@@ -395,6 +499,7 @@
     function renderAll() {
         queued = false;
 
+        Array.prototype.forEach.call(document.querySelectorAll('.elemental-draft-lock-notices'), seed);
         syncHeaderToggles();
 
         var all = document.querySelectorAll('.elemental-draft-lock-notices');
@@ -457,12 +562,6 @@
         childList: true,
         attributes: true,
         attributeFilter: ['class']
-    });
-
-    document.addEventListener('change', function (event) {
-        if (event.target.closest && event.target.closest('.elemental-draft-lock')) {
-            schedule();
-        }
     });
 
     schedule();

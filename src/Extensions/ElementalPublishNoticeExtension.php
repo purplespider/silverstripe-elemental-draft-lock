@@ -5,6 +5,7 @@ namespace PurpleSpider\ElementalDraftLock\Extensions;
 use DNADesign\Elemental\Models\BaseElement;
 use PurpleSpider\ElementalDraftLock\DraftLock;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Control\Director;
 use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\FieldList;
@@ -68,7 +69,7 @@ class ElementalPublishNoticeExtension extends Extension
 
         $held = [];
         $unpublished = [];
-        $heldIDs = [];
+        $lockedIDs = [];
         $types = [];
 
         foreach ($area->Elements() as $element) {
@@ -80,7 +81,7 @@ class ElementalPublishNoticeExtension extends Extension
             $types[$element->ID] = $element->getType();
 
             if ($element->DraftLocked) {
-                $heldIDs[] = $element->ID;
+                $lockedIDs[] = $element->ID;
             }
 
             $published = $element->isPublished();
@@ -126,14 +127,27 @@ class ElementalPublishNoticeExtension extends Extension
             ),
             'untitled' => _t(__CLASS__ . '.UNTITLED', 'Untitled'),
             // For the header switch, which the script builds
+            'toggle-label' => _t(
+                BaseElementDraftLockExtension::class . '.LOCK_AS_DRAFT',
+                'Lock as Draft'
+            ),
             'toggle-title' => _t(
                 __CLASS__ . '.TOGGLE_TITLE',
                 'When on, publishing the page will not publish this block'
             ),
+            'toggle-failed' => _t(
+                __CLASS__ . '.TOGGLE_FAILED',
+                'The lock could not be changed. Reload the page and try again.'
+            ),
         ];
 
-        $attributes = ' data-held-ids="' . Convert::raw2att(implode(',', $heldIDs)) . '"'
+        // Every block's lock, for the header switch and the notices. The keys of the type map are
+        // every block on the page, so a block missing from these IDs is known to be unlocked.
+        $attributes = ' data-locked-ids="' . Convert::raw2att(implode(',', $lockedIDs)) . '"'
+            . ' data-lock-new-blocks="' . (DraftLock::locksNewBlocks() ? '1' : '0') . '"'
             . ' data-lock-on-unpublish="' . (DraftLock::locksOnUnpublish() ? '1' : '0') . '"'
+            . ' data-state-url="' . Convert::raw2att(Director::baseURL() . 'admin/draft-lock/state') . '"'
+            . ' data-toggle-url="' . Convert::raw2att(Director::baseURL() . 'admin/draft-lock/toggle') . '"'
             . ' data-block-types="' . Convert::raw2att(json_encode($types, JSON_FORCE_OBJECT)) . '"';
 
         foreach ($strings as $key => $value) {

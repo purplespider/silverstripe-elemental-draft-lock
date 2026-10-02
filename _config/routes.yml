@@ -1,0 +1,8 @@
+---
+Name: elemental-draft-lock-routes
+Before:
+  - '#adminroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'admin/draft-lock//$Action': PurpleSpider\ElementalDraftLock\Controllers\DraftLockController

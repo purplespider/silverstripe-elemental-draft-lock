@@ -3,9 +3,9 @@
 namespace PurpleSpider\ElementalDraftLock\Extensions;
 
 use DNADesign\Elemental\Models\BaseElement;
+use PurpleSpider\ElementalDraftLock\Controllers\DraftLockController;
 use PurpleSpider\ElementalDraftLock\DraftLock;
 use SilverStripe\Core\Extension;
-use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Versioned\Versioned;
 
@@ -14,7 +14,7 @@ use SilverStripe\Versioned\Versioned;
  *
  * The flag itself is versioned along with the rest of the block, so it lives on the draft
  * record. {@see ChangeSetItemDraftLockExtension} reads it from there when a page publish
- * tries to drag the block along.
+ * tries to drag the block along, and {@see DraftLockController} changes it.
  *
  * @extends Extension<BaseElement>
  */
@@ -41,32 +41,14 @@ class BaseElementDraftLockExtension extends Extension
         }
     }
 
+    /**
+     * The lock is not a form field. It is changed only by the switch in the block header, which
+     * saves straight away through {@see DraftLockController}, so a block form loaded before a
+     * change can never save over it.
+     */
     public function updateCMSFields(FieldList $fields)
     {
-        // Drop the scaffolded checkbox, we place our own version below
         $fields->removeByName('DraftLocked');
-
-        if (!DraftLock::isEnabled()) {
-            return;
-        }
-
-        // The field is always built, even for a published block where it means nothing, and is
-        // hidden by CSS keyed on the live/draft class Elemental puts on the block. Deciding it
-        // here instead would bake the answer into the form at render time, and the inline block
-        // form is not re-fetched when a block is published or unpublished from its own menu, so
-        // the field would stay wrong until the page was reloaded.
-        $fields->addFieldToTab(
-            'Root.Main',
-            CheckboxField::create(
-                'DraftLocked',
-                _t(__CLASS__ . '.LOCK_AS_DRAFT', 'Lock as Draft')
-            )
-                ->setDescription(_t(
-                    __CLASS__ . '.LOCK_AS_DRAFT_DESCRIPTION',
-                    'Publishing the page will skip this block and leave it in draft.'
-                ))
-                ->addExtraClass('elemental-draft-lock')
-        );
     }
 
     public function onBeforeArchive()
@@ -86,8 +68,8 @@ class BaseElementDraftLockExtension extends Extension
      * Unpublishing a page does not unpublish its blocks, so this only runs for a block unpublished
      * directly, or one being archived, which is skipped: it is about to leave the draft stage too.
      *
-     * The switch in an already-loaded block form is not re-fetched after the unpublish, so the
-     * script switches it on to match; see client/js/draft-lock.js.
+     * Elemental does not tell the page about this, so the script re-reads the block's lock when it
+     * sees the block go back to draft; see client/js/draft-lock.js.
      */
     public function onAfterUnpublish()
     {
@@ -110,15 +92,8 @@ class BaseElementDraftLockExtension extends Extension
         });
     }
 
-    // Deliberately no onBeforePublish that changes DraftLocked, and nothing on unpublish unless
-    // `lock_on_unpublish` asks for it.
-    //
-    // It used to be cleared when a block was published from its own menu. That is a GraphQL call,
-    // and Elemental never re-fetches the inline block form afterwards, so the browser went on
-    // showing the switch as on. Unpublishing the block then revealed a switch that said "locked"
-    // over a database that said otherwise, and the next page publish sent the block live.
-    //
-    // So the flag only ever changes when the editor saves it, and "a published block is no longer
-    // held" is expressed in ChangeSetItemDraftLockExtension instead, by the hold only applying
-    // while the block has no live version.
+    // Deliberately no onBeforePublish that clears DraftLocked. A published block is not held
+    // because the hold only applies while a block has no live version (see
+    // ChangeSetItemDraftLockExtension), so the switch can go on saying what the editor set, and
+    // comes back into force if the block is unpublished again.
 }

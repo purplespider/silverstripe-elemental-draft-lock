@@ -165,51 +165,19 @@ class DraftLockTest extends SapphireTest
     }
 
     /**
-     * Whether the field is *visible* is a CSS question, not a server-side one. It is built for
-     * every block and hidden by the stylesheet, keyed on the draft/published class Elemental keeps
-     * current on the block wrapper. Deciding it here instead would freeze the answer into the
-     * form, which is never re-fetched when a block is published from its own menu, so the field
-     * would stay wrong until the page was reloaded.
-     *
-     * What is worth pinning down, then, is the contract the stylesheet relies on: the field is
-     * always there, and always carries the class the CSS hooks onto.
+     * The lock is changed only by the header switch, which saves straight away. A form field for
+     * it would let a block form loaded before a change save the old value back over it.
      */
-    public function testTheFieldIsAlwaysBuiltAndCarriesTheStylesheetHook()
+    public function testTheLockIsNeverAFormField()
     {
         $page = $this->makePage();
-        $block = $this->makeBlock($page, 'Block');
+        $block = $this->makeBlock($page, 'Block', true);
 
-        $field = fn ($el) => $el->getCMSFields()->fieldByName('Root.Main.DraftLocked');
+        $this->assertNull($block->getCMSFields()->dataFieldByName('DraftLocked'));
 
-        $this->assertNotNull($field($block), 'A draft block should offer the hold');
-        $this->assertStringContainsString(
-            'elemental-draft-lock',
-            $field($block)->extraClass(),
-            'The stylesheet needs this class to hide the field once the block is live'
-        );
-
-        $block->publishRecursive();
-        $block = Versioned::get_by_stage(BaseElement::class, Versioned::DRAFT)->byID($block->ID);
-
-        $this->assertNotNull($field($block), 'A published block keeps the field; CSS hides it');
-
-        $block->HTML = '<p>edited</p>';
-        $block->write();
-
-        $this->assertNotNull($field($block), 'And keeps it once modified on draft too');
-    }
-
-    public function testDisablingTheModuleRemovesTheField()
-    {
         DraftLock::config()->set('enabled', false);
 
-        $page = $this->makePage();
-        $block = $this->makeBlock($page, 'Block');
-
-        $this->assertNull(
-            $block->getCMSFields()->fieldByName('Root.Main.DraftLocked'),
-            'Disabling the module should drop the scaffolded field as well as our own'
-        );
+        $this->assertNull($block->getCMSFields()->dataFieldByName('DraftLocked'), 'Nor the scaffolded one');
     }
 
     public function testDisablingTheModulePublishesEverything()

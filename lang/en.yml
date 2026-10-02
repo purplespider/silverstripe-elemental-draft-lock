@@ -1,7 +1,6 @@
 en:
   PurpleSpider\ElementalDraftLock\Extensions\BaseElementDraftLockExtension:
     LOCK_AS_DRAFT: 'Lock as Draft'
-    LOCK_AS_DRAFT_DESCRIPTION: 'Publishing the page will skip this block and leave it in draft.'
   PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension:
     HELD_HEADING: 'Locked Blocks'
     HELD_INTRO: 'These blocks are locked as draft and won''t be published automatically with the page:'
@@ -11,6 +10,7 @@ en:
     UNPUBLISHED_HINT: 'Not ready? Switch on "Lock as Draft".'
     UNTITLED: 'Untitled'
     TOGGLE_TITLE: 'When on, publishing the page will not publish this block'
+    TOGGLE_FAILED: 'The lock could not be changed. Reload the page and try again.'
   PurpleSpider\ElementalDraftLock\Extensions\SiteTreeDraftLockExtension:
     PUBLISH_WITH_LOCKED: 'Publish page and locked blocks'
   PurpleSpider\ElementalDraftLock\Extensions\CMSMainDraftLockExtension:

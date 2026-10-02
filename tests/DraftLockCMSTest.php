@@ -127,4 +127,111 @@ class DraftLockCMSTest extends FunctionalTest
 
         $this->assertFalse($this->isLive($locked), 'The suspension must not outlive its own request');
     }
+
+    private function toggle(BaseElement $block, bool $locked, ?string $token = null)
+    {
+        return $this->post('admin/draft-lock/toggle', array_filter([
+            'ID' => $block->ID,
+            'Locked' => $locked ? 1 : 0,
+            'SecurityID' => $token,
+        ], fn ($value) => $value !== null));
+    }
+
+    private function draft(BaseElement $block): BaseElement
+    {
+        return Versioned::get_by_stage(BaseElement::class, Versioned::DRAFT)->byID($block->ID);
+    }
+
+    public function testTheSwitchSavesTheLockStraightAway()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+
+        $response = $this->toggle($block, true);
+
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+        $this->assertSame(['ID' => $block->ID, 'Locked' => true], json_decode($response->getBody(), true));
+        $this->assertTrue((bool) $this->draft($block)->DraftLocked);
+        $this->assertFalse($this->isLive($block), 'Saving the lock must not publish the block');
+
+        $this->toggle($block, false);
+
+        $this->assertFalse((bool) $this->draft($block)->DraftLocked, 'And it unlocks again');
+    }
+
+    public function testTheSwitchLeavesTheRestOfTheBlockAlone()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Original title');
+
+        $this->toggle($block, true);
+
+        $this->assertSame('Original title', $this->draft($block)->Title);
+    }
+
+    public function testStateReportsTheLock()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Locked', true);
+
+        $response = $this->get('admin/draft-lock/state?ID=' . $block->ID);
+
+        $this->assertSame(['ID' => $block->ID, 'Locked' => true], json_decode($response->getBody(), true));
+    }
+
+    public function testTheSwitchNeedsTheSecurityToken()
+    {
+        SecurityToken::enable();
+
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+
+        $this->assertSame(400, $this->toggle($block, true)->getStatusCode());
+        $this->assertFalse((bool) $this->draft($block)->DraftLocked);
+
+        $this->assertSame(200, $this->toggle($block, true, SecurityToken::inst()->getValue())->getStatusCode());
+        $this->assertTrue((bool) $this->draft($block)->DraftLocked);
+    }
+
+    public function testTheSwitchOnlyAcceptsPost()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+
+        $response = $this->get('admin/draft-lock/toggle?ID=' . $block->ID . '&Locked=1');
+
+        $this->assertSame(405, $response->getStatusCode());
+        $this->assertFalse((bool) $this->draft($block)->DraftLocked);
+    }
+
+    public function testTheSwitchNeedsPermissionToEditTheBlock()
+    {
+        $page = $this->makePage();
+        // Any CMS user may edit pages by default, so this page is restricted to administrators
+        $page->CanEditType = 'OnlyTheseUsers';
+        $page->write();
+        $block = $this->makeBlock($page, 'Block');
+
+        $this->logOut();
+        $this->assertSame(403, $this->toggle($block, true)->getStatusCode(), 'Not logged in');
+
+        // A CMS user who may not edit the page, whose permissions its blocks follow
+        $this->logInWithPermission('CMS_ACCESS_CMSMain');
+        $this->assertSame(403, $this->toggle($block, true)->getStatusCode(), 'Cannot edit the block');
+
+        $this->assertFalse((bool) $this->draft($block)->DraftLocked);
+    }
+
+    public function testUnknownBlocksAndADisabledModuleAreNotFound()
+    {
+        $this->assertSame(404, $this->get('admin/draft-lock/state?ID=999999')->getStatusCode());
+
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+
+        DraftLock::config()->set('enabled', false);
+
+        $this->assertSame(404, $this->toggle($block, true)->getStatusCode());
+        $this->assertFalse((bool) $this->draft($block)->DraftLocked);
+    }
 }
