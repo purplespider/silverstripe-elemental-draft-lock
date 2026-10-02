@@ -7,6 +7,7 @@ use PurpleSpider\ElementalDraftLock\DraftLock;
 use SilverStripe\Core\Extension;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Versioned\Versioned;
 
 /**
  * Adds the "Lock as Draft" flag to every Elemental block.
@@ -22,6 +23,13 @@ class BaseElementDraftLockExtension extends Extension
     private static array $db = [
         'DraftLocked' => 'Boolean',
     ];
+
+    /**
+     * IDs of blocks being archived, which unpublishes them on the way. Kept by ID rather than as
+     * a flag on this object, because one extension instance is shared by every block. Not a
+     * private static, which would be treated as config.
+     */
+    protected static array $archiving = [];
 
     /**
      * Runs only when a block is first created, so `lock_new_blocks` never touches existing blocks
@@ -61,7 +69,49 @@ class BaseElementDraftLockExtension extends Extension
         );
     }
 
-    // Deliberately no onBeforePublish/onAfterUnpublish that changes DraftLocked.
+    public function onBeforeArchive()
+    {
+        static::$archiving[$this->owner->ID] = true;
+    }
+
+    public function onAfterArchive()
+    {
+        unset(static::$archiving[$this->owner->ID]);
+    }
+
+    /**
+     * With `lock_on_unpublish`, a block taken off the live site on its own is locked, so the next
+     * page publish does not quietly put it back.
+     *
+     * Unpublishing a page does not unpublish its blocks, so this only runs for a block unpublished
+     * directly, or one being archived, which is skipped: it is about to leave the draft stage too.
+     *
+     * The switch in an already-loaded block form is not re-fetched after the unpublish, so the
+     * script switches it on to match; see client/js/draft-lock.js.
+     */
+    public function onAfterUnpublish()
+    {
+        if (!DraftLock::locksOnUnpublish() || isset(static::$archiving[$this->owner->ID])) {
+            return;
+        }
+
+        $owner = $this->owner;
+
+        Versioned::withVersionedMode(function () use ($owner) {
+            Versioned::set_stage(Versioned::DRAFT);
+
+            $draft = Versioned::get_by_stage(get_class($owner), Versioned::DRAFT)->byID($owner->ID);
+
+            if ($draft && !$draft->DraftLocked) {
+                $draft->DraftLocked = true;
+                $draft->write();
+                $owner->DraftLocked = true;
+            }
+        });
+    }
+
+    // Deliberately no onBeforePublish that changes DraftLocked, and nothing on unpublish unless
+    // `lock_on_unpublish` asks for it.
     //
     // It used to be cleared when a block was published from its own menu. That is a GraphQL call,
     // and Elemental never re-fetches the inline block form afterwards, so the browser went on

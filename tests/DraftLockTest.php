@@ -29,6 +29,7 @@ class DraftLockTest extends SapphireTest
         // Whatever the site running the tests has configured
         DraftLock::config()->set('enabled', true);
         DraftLock::config()->set('lock_new_blocks', false);
+        DraftLock::config()->set('lock_on_unpublish', false);
     }
 
     private function makePage(): DraftLockTestPage
@@ -273,5 +274,63 @@ class DraftLockTest extends SapphireTest
         }
 
         $this->assertFalse(DraftLock::isSuspended(), 'Even if the publish throws');
+    }
+
+    public function testUnpublishingABlockLeavesItUnlockedByDefault()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+        $page->publishRecursive();
+
+        $this->reload($block)->doUnpublish();
+
+        $this->assertFalse((bool) $this->reload($block)->DraftLocked);
+    }
+
+    public function testLockOnUnpublishLocksTheBlockAndKeepsItOffTheNextPagePublish()
+    {
+        DraftLock::config()->set('lock_on_unpublish', true);
+
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+        $page->publishRecursive();
+
+        $this->reload($block)->doUnpublish();
+
+        $this->assertTrue((bool) $this->reload($block)->DraftLocked, 'Unpublishing it locked it');
+
+        $page->publishRecursive();
+
+        $this->assertFalse($this->isLive($block), 'So the page publish leaves it in draft');
+    }
+
+    public function testLockOnUnpublishDoesNotTouchBlocksWhenThePageIsUnpublished()
+    {
+        DraftLock::config()->set('lock_on_unpublish', true);
+
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+        $page->publishRecursive();
+
+        $page->doUnpublish();
+
+        $this->assertFalse((bool) $this->reload($block)->DraftLocked);
+    }
+
+    public function testLockOnUnpublishDoesNotBringAnArchivedBlockBack()
+    {
+        DraftLock::config()->set('lock_on_unpublish', true);
+
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Block');
+        $page->publishRecursive();
+
+        $this->reload($block)->doArchive();
+
+        $this->assertNull(
+            Versioned::get_by_stage(BaseElement::class, Versioned::DRAFT)->byID($block->ID),
+            'Archiving must still remove it from draft'
+        );
+        $this->assertFalse($this->isLive($block));
     }
 }

@@ -124,6 +124,7 @@ class ElementalPublishNoticeExtension extends Extension
         ];
 
         $attributes = ' data-held-ids="' . Convert::raw2att(implode(',', $heldIDs)) . '"'
+            . ' data-lock-on-unpublish="' . (DraftLock::locksOnUnpublish() ? '1' : '0') . '"'
             . ' data-block-types="' . Convert::raw2att(json_encode($types, JSON_FORCE_OBJECT)) . '"';
 
         foreach ($strings as $key => $value) {

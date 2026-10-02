@@ -31,6 +31,14 @@ class DraftLock
     private static bool $lock_new_blocks = false;
 
     /**
+     * Set to true to lock a block whenever it is unpublished on its own, so the next page publish
+     * leaves it in draft instead of putting it straight back on the live site.
+     *
+     * @config
+     */
+    private static bool $lock_on_unpublish = false;
+
+    /**
      * Whether locks are being ignored for the publish in progress. Deliberately not a private
      * static, which Configurable would treat as config.
      */
@@ -44,6 +52,11 @@ class DraftLock
     public static function locksNewBlocks(): bool
     {
         return static::isEnabled() && static::config()->get('lock_new_blocks');
+    }
+
+    public static function locksOnUnpublish(): bool
+    {
+        return static::isEnabled() && static::config()->get('lock_on_unpublish');
     }
 
     /**

@@ -68,6 +68,11 @@
             return checkbox.checked;
         }
 
+        /* Locked by the server since this page was loaded, see matchLockOnUnpublish() */
+        if (block.draftLockLockedOnUnpublish) {
+            return true;
+        }
+
         return heldIDs.indexOf(blockID(block)) !== -1;
     }
 
@@ -313,12 +318,47 @@
         return toggle;
     }
 
+    function locksOnUnpublish() {
+        var notices = document.querySelector('.elemental-draft-lock-notices');
+
+        return Boolean(notices && notices.getAttribute('data-lock-on-unpublish') === '1');
+    }
+
+    /**
+     * With `lock_on_unpublish` the server locks a block when it is unpublished from its own menu.
+     * That is a GraphQL call after which Elemental does not re-fetch the block's form, so a form
+     * already loaded would go on showing the switch off, and saving it would unlock the block
+     * again. This switches it on to match, through the checkbox, so the form knows it changed.
+     * A block whose form is not loaded yet will fetch the locked value when it is opened.
+     */
+    function matchLockOnUnpublish(block) {
+        var checkbox = block.querySelector('.elemental-draft-lock input[type="checkbox"]');
+
+        block.draftLockLockedOnUnpublish = true;
+
+        if (checkbox && !checkbox.checked) {
+            checkbox.click();
+        }
+    }
+
     /** Adds, updates or removes the header switch on every block, only where it would change. */
     function syncHeaderToggles() {
+        var lockOnUnpublish = locksOnUnpublish();
+
         Array.prototype.forEach.call(document.querySelectorAll(BLOCK), function (block) {
+            var draftOnly = blockIsDraftOnly(block);
+
+            /* Only a block seen on the live site and now off it has just been unpublished. One that
+               has been draft only since the page loaded has not. */
+            if (lockOnUnpublish && block.draftLockWasDraftOnly === false && draftOnly) {
+                matchLockOnUnpublish(block);
+            }
+
+            block.draftLockWasDraftOnly = draftOnly;
+
             var actions = block.querySelector('.element-editor-header__actions');
             var toggle = actions && actions.querySelector('.' + HEADER_TOGGLE);
-            var checkbox = blockIsDraftOnly(block) ? visibleCheckbox(block) : null;
+            var checkbox = draftOnly ? visibleCheckbox(block) : null;
             var wanted = Boolean(actions && checkbox);
 
             if (!wanted) {

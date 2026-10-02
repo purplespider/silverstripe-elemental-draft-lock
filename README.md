@@ -66,6 +66,10 @@ did not resend it. The next page publish sent the block live.
 So the flag only changes when the editor saves it, and "a published block is no longer held" is
 expressed by the change-type rule above instead. What the switch shows is always what happens.
 
+The one exception is `lock_on_unpublish` (below), which locks a block on the server when it is
+unpublished. The script switches on the checkbox in any block form already loaded to match, so the
+form and the database still agree and a later save does not unlock it again.
+
 ## Styling
 
 The CMS stylesheet is inlined via `Requirements::customCSS()` from a `LeftAndMain` extension rather
@@ -103,6 +107,17 @@ PurpleSpider\ElementalDraftLock\DraftLock:
 Only blocks created after it is turned on are affected; existing blocks keep whatever they had.
 Editors then publish blocks one at a time from their own menus, or all at once with **Publish page
 and locked blocks**.
+
+To lock a block whenever it is unpublished on its own, so the next page publish does not quietly put
+it back on the live site:
+
+```yaml
+PurpleSpider\ElementalDraftLock\DraftLock:
+  lock_on_unpublish: true
+```
+
+Unpublishing a page does not unpublish its blocks, so this only affects blocks unpublished from their
+own menu. Archiving a block is left alone.
 
 ## Known limitation
 
