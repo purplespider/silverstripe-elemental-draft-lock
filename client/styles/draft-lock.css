@@ -88,9 +88,10 @@
     cursor: pointer;
 }
 
-/* On: a warm fill behind the switch and its label */
+/* On: the CMS's own draft badge colours, $state-modified-bg behind and $state-draft on the
+   track, so the lock reads as part of the block's draft state. 4.5:1 track on fill, 7.3:1 label. */
 .elemental-draft-lock-header[aria-checked="true"] {
-    background-color: #fbecc6;
+    background-color: #fff7f0;
 }
 
 .elemental-draft-lock-header__track {
@@ -116,7 +117,7 @@
 }
 
 .elemental-draft-lock-header[aria-checked="true"] .elemental-draft-lock-header__track {
-    background-color: #7a5200;
+    background-color: #cf3f00;
 }
 
 .elemental-draft-lock-header[aria-checked="true"] .elemental-draft-lock-header__track::before {
@@ -130,7 +131,7 @@
     }
 }
 
-/* A solid ring rather than a tint, so focus is clear on the amber fill too. Handled on :focus as
+/* A solid ring rather than a tint, so focus is clear on the orange fill too. Handled on :focus as
    well, since Bootstrap's button:focus rule would otherwise draw its own ring on mouse click. */
 .elemental-draft-lock-header:focus,
 .elemental-draft-lock-header:focus-visible {
