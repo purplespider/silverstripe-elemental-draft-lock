@@ -234,4 +234,49 @@ class DraftLockCMSTest extends FunctionalTest
         $this->assertSame(404, $this->toggle($block, true)->getStatusCode());
         $this->assertFalse((bool) $this->draft($block)->DraftLocked);
     }
+
+    private function editScreen(DraftLockTestPage $page, BaseElement $block): string
+    {
+        $response = $this->get(sprintf(
+            'admin/pages/edit/EditForm/%d/field/ElementalArea/item/%d/edit',
+            $page->ID,
+            $block->ID
+        ));
+
+        $this->assertSame(200, $response->getStatusCode());
+
+        return (string) $response->getBody();
+    }
+
+    public function testTheBlockEditScreenHasTheSwitchInItsActionBar()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Locked', true);
+
+        $button = $this->switchButton($this->editScreen($page, $block));
+
+        $this->assertNotNull($button, 'The switch is in the action bar');
+        $this->assertStringContainsString('data-id="' . $block->ID . '"', $button);
+        $this->assertStringContainsString('aria-checked="true"', $button, 'Drawn already set');
+    }
+
+    /**
+     * The switch's button tag, if the screen has one. Searched for as a tag because the script
+     * inlined into every CMS page mentions the same class names.
+     */
+    private function switchButton(string $html): ?string
+    {
+        return preg_match('/<button[^>]*elemental-draft-lock-form-toggle[^>]*>/', $html, $match)
+            ? $match[0]
+            : null;
+    }
+
+    public function testThePublishedBlockEditScreenHasNoSwitch()
+    {
+        $page = $this->makePage();
+        $block = $this->makeBlock($page, 'Live');
+        $block->publishRecursive();
+
+        $this->assertNull($this->switchButton($this->editScreen($page, $block)));
+    }
 }

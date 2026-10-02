@@ -142,3 +142,10 @@
 .elemental-draft-lock-header:focus:not(:focus-visible) {
     outline: none;
 }
+
+/* The same switch in the action bar of a block's own edit screen. The bar's button group would
+   otherwise stretch it to the height of the buttons beside it. */
+.elemental-draft-lock-form-toggle {
+    align-self: center;
+    margin-right: 0.75rem;
+}

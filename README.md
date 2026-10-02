@@ -20,7 +20,8 @@ were in draft beforehand, so no easy way to put things back.
 Switch on **Lock as Draft** for a block, and publishing the page leaves it in draft.
 
 - The switch sits in the block's header, beside its `...` menu, while the block is expanded and
-  still in draft. It saves straight away, so there is no need to save the block or page after.
+  still in draft. Blocks that are not edited inline have it in the action bar of their own edit
+  screen instead. It saves straight away, so there is no need to save the block or page after.
 - Locked blocks show a padlock on their status badge in the block list.
 - A notice below the block list shows which blocks are locked, and which draft blocks will go live
   with the page.

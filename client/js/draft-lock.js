@@ -306,12 +306,12 @@
     var saving = {};
 
     /**
-     * Whether the block is open. A block that cannot be edited inline never opens, so it counts as
-     * open, or it would never get a switch at all.
+     * Whether the block is open inline. A block that is not edited inline never opens here; its
+     * switch is in the action bar of its own edit screen instead.
      */
     function isOpen(block) {
         if (!block.classList.contains('element-editor__element--expandable')) {
-            return !block.classList.contains('element-editor__element--broken');
+            return false;
         }
 
         var form = block.querySelector('.element-editor-editform');
@@ -344,19 +344,15 @@
     }
 
     /**
-     * Saves the block's lock straight away. The switch moves first, and moves back if the save
-     * fails, so it never sits saying something the server does not.
+     * Saves a block's lock straight away. The switch moves first, and moves back if the save
+     * fails, so it never sits saying something the server does not. `done` is given the lock
+     * the server ended up with.
      */
-    function save(block, toggle) {
-        var data = settings();
-        var id = blockID(block);
-
-        if (!data || !id || saving[id]) {
+    function postLock(id, locked, url, failedMessage, toggle, done) {
+        if (saving[id]) {
             return;
         }
 
-        var previous = isLocked(block);
-        var locked = !previous;
         var body = new window.URLSearchParams();
 
         body.append('ID', id);
@@ -364,12 +360,10 @@
         body.append('SecurityID', securityToken());
 
         saving[id] = true;
-        locks[id] = locked;
         setChecked(toggle, locked);
         toggle.setAttribute('aria-busy', 'true');
-        schedule();
 
-        window.fetch(data.toggleUrl, {
+        window.fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -383,18 +377,61 @@
                 return response.json();
             })
             .then(function (result) {
-                locks[id] = Boolean(result.Locked);
+                return Boolean(result.Locked);
             })
             .catch(function () {
-                locks[id] = previous;
-                showError(data.toggleFailed);
+                showError(failedMessage);
+
+                return !locked;
             })
-            .then(function () {
+            .then(function (result) {
                 delete saving[id];
                 toggle.removeAttribute('aria-busy');
-                schedule();
+                setChecked(toggle, result);
+                done(result);
             });
     }
+
+    /** The switch in a block header */
+    function save(block, toggle) {
+        var data = settings();
+        var id = blockID(block);
+
+        if (!data || !id || saving[id]) {
+            return;
+        }
+
+        var locked = !isLocked(block);
+
+        locks[id] = locked;
+        schedule();
+
+        postLock(id, locked, data.toggleUrl, data.toggleFailed, toggle, function (result) {
+            locks[id] = result;
+            schedule();
+        });
+    }
+
+    /* The switch in the action bar of a block's own edit screen, which the server draws already
+       set. That screen is reloaded after anything that would change it, so it keeps no state. */
+    document.addEventListener('click', function (event) {
+        var toggle = event.target.closest && event.target.closest('.elemental-draft-lock-form-toggle');
+
+        if (!toggle) {
+            return;
+        }
+
+        event.preventDefault();
+
+        postLock(
+            toggle.getAttribute('data-id'),
+            toggle.getAttribute('aria-checked') !== 'true',
+            toggle.getAttribute('data-toggle-url'),
+            toggle.getAttribute('data-toggle-failed'),
+            toggle,
+            function () {}
+        );
+    });
 
     /**
      * Builds the header switch for a block. The header is drawn by Elemental's React code, which

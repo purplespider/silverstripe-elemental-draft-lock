@@ -23,3 +23,7 @@ SilverStripe\CMS\Model\SiteTree:
 SilverStripe\CMS\Controllers\CMSMain:
   extensions:
     - PurpleSpider\ElementalDraftLock\Extensions\CMSMainDraftLockExtension
+
+SilverStripe\Forms\GridField\GridFieldDetailForm_ItemRequest:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\ItemRequestDraftLockExtension
