@@ -1,0 +1,20 @@
+---
+Name: elemental-draft-lock
+After:
+  - '#elemental'
+---
+SilverStripe\Admin\LeftAndMain:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\LeftAndMainDraftLockExtension
+
+DNADesign\Elemental\Models\BaseElement:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\BaseElementDraftLockExtension
+
+SilverStripe\Versioned\ChangeSetItem:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\ChangeSetItemDraftLockExtension
+
+SilverStripe\CMS\Model\SiteTree:
+  extensions:
+    - PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension

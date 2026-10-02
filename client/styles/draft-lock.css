@@ -1,0 +1,193 @@
+/**
+ * Styling for the "Lock as Draft" switch, which sits at the bottom of each block's
+ * Content tab.
+ *
+ * It only appears while a block is still in draft. Off, it is an unadorned row in the form; on,
+ * the row fills amber and the help text unfolds beneath it. The switch itself carries the state,
+ * so nothing here depends on colour alone.
+ *
+ * The :has() rules mean it reacts the moment the switch is thrown, without waiting for a save.
+ * Where :has() is unsupported it simply keeps its off appearance, which is still usable.
+ */
+
+/* The hold only means anything while a block is still in draft. Elemental keeps these classes on
+   the block wrapper in sync as blocks are published and unpublished, so hiding the field this way
+   rather than leaving it out of the form server-side keeps it correct without a page reload. */
+.element-editor__element--published .field.elemental-draft-lock,
+.element-editor__element--modified .field.elemental-draft-lock {
+    display: none;
+}
+
+/* A padlock on the status badge of a held block, so the hold is visible in the collapsed block
+   list without opening anything. The badge is drawn by Elemental's React code, so the script
+   marks the block wrapper instead and the glyph goes on with the admin's own icon font: \e004 is
+   font-icon-lock. `speak: none` matches how the admin suppresses its own icon glyphs, and the
+   badge keeps its own title attribute, so nothing is lost when the glyph is not announced. */
+.elemental-draft-lock-held .badge::before {
+    content: "\e004";
+    margin-right: 0.35em;
+    font-family: "silverstripe";
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    speak: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* The notices below the block list: one line naming the blocks, one line saying what to do */
+.elemental-draft-lock-notice[hidden] {
+    display: none;
+}
+
+.elemental-draft-lock-notice {
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.elemental-draft-lock-notice__list {
+    margin: 0.2rem 0 0;
+    padding-left: 1.25rem;
+}
+
+/* No opacity fade here: it drops the hint to 3.74:1 on Bootstrap's alert-warning fill, under the
+   4.5:1 minimum for text this size. The bold heading carries the hierarchy instead. */
+.elemental-draft-lock-notice__hint {
+    display: block;
+    margin-top: 0.3rem;
+}
+
+/* The same three dots icon as the button being referred to. Decorative, and marked aria-hidden
+   where it is used, so the sentence still reads as "the menu at the top right of the block". */
+.elemental-draft-lock-dots {
+    /* The glyph is drawn near the top of its em box, so at the baseline it reads as asterisks.
+       Dropping it puts the dots at mid x-height, where the button's own icon sits. */
+    vertical-align: -0.28em;
+    font-size: 1.15em;
+}
+
+/* Off, this is just another row in the form: no fill and no border, so it sits quietly under the
+   content fields rather than announcing itself on every draft block. The border is transparent
+   rather than absent so that turning it on colours the box in without shifting anything. */
+.field.elemental-draft-lock {
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background-color: transparent;
+}
+
+/* The admin puts 1.5385rem of horizontal padding on the field holder and a bottom margin on the
+   description. Left alone they make the inset uneven on all four sides, so the panel's own
+   padding is left as the only thing spacing the contents.
+   The selector is long on purpose: the admin rule it overrides is
+   `.cms-edit-form .form-group:not(.stacked) .form__field-holder`, so it needs five classes to
+   win on specificity rather than on source order. All four are really on the holder's parent. */
+.form-group.field.checkbox.elemental-draft-lock .form__field-holder {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* `div` on purpose: the admin puts the `form-check` class on the input as well as on its wrapper,
+   so an unqualified selector pads the switch itself out of shape. */
+.field.elemental-draft-lock div.form-check {
+    margin-bottom: 0;
+    /* Room for the switch, which is wider than the checkbox the admin allows 20px for */
+    padding-left: 46px;
+    min-height: 20px;
+}
+
+/* A switch, built on the checkbox the CMS already renders.
+   Silverstripe does ship Bootstrap's .custom-switch styles, but they need .custom-control markup
+   with the label as a *sibling* of the input, and the React checkbox field nests the input inside
+   the label instead, so those rules can never bind. Restyling the input itself is far less work
+   than replacing the field with a custom React component, and it fixes a real problem: the
+   checkbox is otherwise an unstyled native control, so its checked colour is whatever accent
+   colour the editor happens to have set on their operating system. */
+.field.elemental-draft-lock input.form-check-input {
+    appearance: none;
+    -webkit-appearance: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 20px;
+    margin: 0;
+    border: 0;
+    border-radius: 10px;
+    background-color: #767b80;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.field.elemental-draft-lock input.form-check-input::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #fff;
+    transition: transform 0.15s ease-in-out;
+}
+
+.field.elemental-draft-lock input.form-check-input:checked {
+    background-color: #7a5200;
+}
+
+.field.elemental-draft-lock input.form-check-input:checked::before {
+    transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .field.elemental-draft-lock input.form-check-input,
+    .field.elemental-draft-lock input.form-check-input::before {
+        transition: none;
+    }
+}
+
+/* Sized and weighted like the admin's own field labels so the panel reads as part of the form.
+   No colour is set here or on the description: both inherit the admin's, which is the point. */
+.field.elemental-draft-lock .form-check-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+    cursor: pointer;
+}
+
+/* The help text is only worth reading once the switch is on. Off, the label says enough and the
+   panel stays a single quiet line. */
+.field.elemental-draft-lock .form__field-description {
+    display: none;
+    margin-top: 0.45rem;
+    margin-bottom: 0;
+    line-height: 1.35;
+}
+
+.field.elemental-draft-lock:has(input:checked) .form__field-description {
+    display: block;
+}
+
+/* On: a warm fill and a matching border. The switch carries the state, so this stays a tint
+   rather than the heavy left bar it used to be. Light enough that the admin's own description
+   colour still measures 4.61:1 on it. */
+.field.elemental-draft-lock:has(input:checked) {
+    border-color: #7a5200;
+    background-color: #fbecc6;
+    /* The switch sits flush against the top padding, but the last line of help text carries half
+       its leading below the glyphs. Trimming that much off the bottom makes the two look equal. */
+    padding-bottom: 10px;
+}
+
+/* A solid ring rather than a tint-to-tint swap, so the focused state is clear on the amber
+   background as well as on the grey one */
+.field.elemental-draft-lock input.form-check-input:focus,
+.field.elemental-draft-lock input.form-check-input:focus-visible {
+    outline: 3px solid #123a7a;
+    outline-offset: 2px;
+    box-shadow: none;
+}

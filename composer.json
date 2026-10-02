@@ -1,0 +1,42 @@
+{
+    "name": "purplespider/silverstripe-elemental-draft-lock",
+    "description": "Lets editors lock an individual Elemental block as draft, so publishing the page does not publish it",
+    "type": "silverstripe-vendormodule",
+    "homepage": "https://github.com/purplespider/silverstripe-elemental-draft-lock",
+    "keywords": ["silverstripe", "elemental", "publish", "draft", "lock", "blocks"],
+    "license": "BSD-3-Clause",
+    "authors": [{
+        "name": "James Cocker",
+        "email": "ssmodules@pswd.biz"
+    }],
+    "support": {
+        "issues": "https://github.com/purplespider/silverstripe-elemental-draft-lock/issues"
+    },
+    "require": {
+        "php": "^8.1",
+        "silverstripe/framework": "^5",
+        "silverstripe/cms": "^5",
+        "silverstripe/versioned": "^2",
+        "dnadesign/silverstripe-elemental": "^5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "PurpleSpider\\ElementalDraftLock\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PurpleSpider\\ElementalDraftLock\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "silverstripe/vendor-plugin": true,
+            "silverstripe/recipe-plugin": true
+        }
+    }
+}

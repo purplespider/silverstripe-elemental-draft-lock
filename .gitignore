@@ -1,0 +1,7 @@
+/vendor/
+/public/
+/composer.lock
+/.env
+/silverstripe-cache/
+/app/
+/.phpunit.result.cache

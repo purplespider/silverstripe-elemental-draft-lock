@@ -1,0 +1,10 @@
+en:
+  PurpleSpider\ElementalDraftLock\Extensions\BaseElementDraftLockExtension:
+    LOCK_AS_DRAFT: 'Lock as Draft'
+    LOCK_AS_DRAFT_DESCRIPTION: 'Publishing the page will skip this block and leave it in draft.'
+  PurpleSpider\ElementalDraftLock\Extensions\ElementalPublishNoticeExtension:
+    HELD_HEADING: 'Blocks not publishing automatically with this page:'
+    HELD_HINT: 'Publish a block on its own from its <i class="font-icon-dot-3 elemental-draft-lock-dots" aria-hidden="true"></i> menu.'
+    UNPUBLISHED_HEADING: 'Blocks going live with this page:'
+    UNPUBLISHED_HINT: 'Not ready? Turn on "Lock as Draft" for it.'
+    UNTITLED: 'Untitled'
